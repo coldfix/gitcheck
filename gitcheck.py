@@ -27,7 +27,6 @@ class GitFlags:
 
 class GitStatus:
 
-    GIT_CLEAN = ['git', 'diff', '--quiet', '--ignore-submodules=dirty']
     GIT_STATUS = ['git', 'status', '--porcelain', '-b']
     DEVNULL = open(os.devnull, 'r+')
 
@@ -36,11 +35,7 @@ class GitStatus:
     branch = None
 
     def __init__(self, folder):
-        clean = subprocess.call(self.GIT_CLEAN, cwd=folder,
-                                stdout=self.DEVNULL, stderr=self.DEVNULL)
         status = subprocess.check_output(self.GIT_STATUS, cwd=folder)
-
-        self.clean = clean == 0
 
         index_flags = set()
         workdir_flags = set()
@@ -61,6 +56,10 @@ class GitStatus:
 
         self.workdir_status = GitFlags(workdir_flags)
         self.index_status = GitFlags(index_flags)
+
+    @property
+    def clean(self):
+        return self.workdir_status.clean and self.index_status.clean
 
     def code(self):
         return ''.join([

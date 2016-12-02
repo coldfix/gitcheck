@@ -5,12 +5,6 @@ import sys
 import subprocess
 import re
 
-import operator
-
-
-def alias(name):
-    return property(operator.attrgetter(name))
-
 
 class GitFlags:
 

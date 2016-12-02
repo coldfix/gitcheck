@@ -3,13 +3,14 @@
 gitcheck - recursively check for unclean/unpushed git repositories.
 
 Usage:
-    gitcheck PATH
+    gitcheck [PATH]
 """
 
 import os
-import sys
 import subprocess
 import re
+
+from docopt import docopt
 
 
 #----------------------------------------
@@ -155,7 +156,7 @@ def collect_git_repositories(folder):
         yield from collect_git_repositories(os.path.join(folder, subdir))
 
 
-def main(folder=None):
+def show_repos(folder=None):
     if folder is None:
         folder = '.'
     folder = os.path.realpath(folder)
@@ -167,5 +168,10 @@ def main(folder=None):
         print(status.code(), folder)
 
 
+def main(args=None):
+    opts = docopt(__doc__, args)
+    show_repos(opts['PATH'])
+
+
 if __name__ == '__main__':
-    main(*sys.argv[1:])
+    main()

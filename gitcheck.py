@@ -12,6 +12,17 @@ import subprocess
 import re
 
 
+#----------------------------------------
+# Constants
+#----------------------------------------
+
+# Check status of index/workdir
+GIT_STATUS = ['git', 'status', '--porcelain', '--branch']
+
+# Get sync status for each branch
+SYNC_PART = re.compile(r'\[([^\[\]]*)\]$')
+
+
 class GitFlags:
 
     def __init__(self, flags):
@@ -29,22 +40,18 @@ class GitFlags:
 
 class GitStatus:
 
-    GIT_STATUS = ['git', 'status', '--porcelain', '-b']
-    DEVNULL = open(os.devnull, 'r+')
-    SYNC_PART = re.compile(r'\[([^\[\]]*)\]$')
-
     gone = False
     untracked = False
 
     def __init__(self, folder):
-        status = subprocess.check_output(self.GIT_STATUS, cwd=folder)
+        status = subprocess.check_output(GIT_STATUS, cwd=folder)
         self.sync_status = {}
 
         index_flags = set()
         workdir_flags = set()
         for l in status.decode('utf-8').splitlines():
             if l.startswith('## '):
-                sync_status = self.SYNC_PART.search(l)
+                sync_status = SYNC_PART.search(l)
                 if sync_status is not None:
                     for part in sync_status.group(1).split(','):
                         if part.strip() == 'gone':

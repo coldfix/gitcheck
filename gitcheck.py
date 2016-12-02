@@ -66,7 +66,9 @@ class GitStatus:
 
     @property
     def clean(self):
-        return self.workdir_status.clean and self.index_status.clean
+        return (self.workdir_status.clean and
+                self.index_status.clean and
+                self.synced)
 
     @property
     def synced(self):

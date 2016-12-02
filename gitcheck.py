@@ -35,8 +35,11 @@ class GitSyncStatus:
     ahead = 0
     behind = 0
 
-    def __init__(self, status_line):
-        sync_status = SYNC_PART.search(status_line)
+    def __init__(self, branch, remote, divergence):
+        self.branch = branch
+        self.remote = remote
+        self.is_tracked = bool(remote)
+        sync_status = SYNC_PART.search(divergence)
         if sync_status is None:
             return
         for part in sync_status.group(1).split(','):
@@ -45,6 +48,16 @@ class GitSyncStatus:
                 continue
             key, val = part.split()
             setattr(self, key, int(val))
+
+    @classmethod
+    def parse(cls, status_line):
+        branch = status_line
+        remote = divergence = ''
+        if '...' in branch:
+            branch, remote = branch.split('...', 1)
+            if ' ' in remote:
+                remote, divergence = remote.split(' ', 1)
+        return cls(branch, remote, divergence)
 
     @property
     def synced(self):
@@ -77,7 +90,7 @@ class GitStatus:
         workdir_flags = set()
         for l in status.decode('utf-8').splitlines():
             if l.startswith('## '):
-                self.sync_status = GitSyncStatus(l)
+                self.sync_status = [GitSyncStatus.parse(l[3:])]
             elif l.startswith('?? '):
                 self.untracked = True
             else:
@@ -92,11 +105,16 @@ class GitStatus:
     def clean(self):
         return (self.workdir_status.clean and
                 self.index_status.clean and
-                self.synced)
+                self.synced and
+                self.is_tracked)
 
     @property
     def synced(self):
-        return self.sync_status.synced
+        return all(stat.synced for stat in self.sync_status)
+
+    @property
+    def is_tracked(self):
+        return all(stat.is_tracked for stat in self.sync_status)
 
     def code(self):
         return ''.join([
@@ -104,6 +122,7 @@ class GitStatus:
             ' ' if self.index_status.clean else 'I',
             'T' if self.untracked else ' ',
             ' ' if self.synced else 'S',
+            ' ' if self.is_tracked else 'U',
         ])
 
 

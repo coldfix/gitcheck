@@ -39,18 +39,18 @@ class GitStatus:
 
         index_flags = set()
         workdir_flags = set()
-        for l in status.splitlines():
-            if l.startswith(b'## '):
-                if l.endswith(b'ahead'):
+        for l in status.decode('utf-8').splitlines():
+            if l.startswith('## '):
+                if l.endswith('ahead'):
                     self.branch = 'ahead'
-                elif l.endswith(b'behind'):
+                elif l.endswith('behind'):
                     self.branch = 'behind'
-                elif l.endswith(b'diverged'):
+                elif l.endswith('diverged'):
                     self.branch = 'diverged'
-            elif l.startswith(b'?? '):
+            elif l.startswith('?? '):
                 self.untracked = True
             else:
-                i, w = l[:2].decode('utf-8')
+                i, w = l[:2]
                 index_flags.add(i)
                 workdir_flags.add(w)
 

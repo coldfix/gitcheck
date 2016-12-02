@@ -24,6 +24,7 @@ class GitFlags:
         self.renamed  = 'R' in flags
         self.copied   = 'C' in flags
         self.unmerged = 'U' in flags
+        self.typechange = 'T' in flags
 
 
 class GitStatus:

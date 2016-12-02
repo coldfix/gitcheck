@@ -3,7 +3,10 @@
 gitcheck - recursively check for unclean/unpushed git repositories.
 
 Usage:
-    gitcheck [PATH]
+    gitcheck [PATH] [--branches]
+
+Options:
+    --branches              Show untracked branches
 """
 
 import os
@@ -67,6 +70,17 @@ class GitSyncStatus:
     @property
     def synced(self):
         return self.ahead == 0 and self.behind == 0 and not self.gone
+
+    def info(self):
+        if self.is_tracked:
+            code = '<' if self.behind > 0 else ''
+            code += '>' if self.ahead > 0 else ''
+            code = code or '='
+        else:
+            code = 'U'
+        return '{:9}{:2} {}'.format(
+            '', code, self.branch)
+
 
 
 class GitFlags:
@@ -156,7 +170,7 @@ def collect_git_repositories(folder):
         yield from collect_git_repositories(os.path.join(folder, subdir))
 
 
-def show_repos(folder=None):
+def show_repos(folder=None, show_branch_details=False):
     if folder is None:
         folder = '.'
     folder = os.path.realpath(folder)
@@ -167,10 +181,16 @@ def show_repos(folder=None):
             continue
         print(status.code(), folder)
 
+        if show_branch_details:
+            for stat in status.branch_sync:
+                if not stat.synced or not stat.is_tracked:
+                    print(stat.info())
+
 
 def main(args=None):
     opts = docopt(__doc__, args)
-    show_repos(opts['PATH'])
+    show_repos(opts['PATH'],
+               show_branch_details=opts['--branches'])
 
 
 if __name__ == '__main__':

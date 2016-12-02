@@ -3,11 +3,12 @@
 gitcheck - recursively check for unclean/unpushed git repositories.
 
 Usage:
-    gitcheck [PATH] [--branches] [--ignore PATH]...
+    gitcheck [PATH] [--branches] [--ignore PATH]... [--maxdepth DEPTH]
 
 Options:
-    --branches              Show untracked branches
-    -i PATH --ignore PATH   Ignore this path
+    --branches                      Show untracked branches
+    -i PATH --ignore PATH           Ignore this path
+    -m LVL, --maxdepth LVL          Maximum recursion depth
 """
 
 import os
@@ -162,7 +163,7 @@ class GitStatus:
         ])
 
 
-def collect_git_repositories(folder, ignore):
+def collect_git_repositories(folder, ignore, maxdepth):
     normpath = realpath(folder)
     if normpath in ignore:
         return
@@ -173,20 +174,22 @@ def collect_git_repositories(folder, ignore):
     if '.git' in subdirs:
         yield folder
         return
+    if maxdepth == 0:
+        return
     for subdir in subdirs:
         if subdir.startswith('.'):
             continue
         subfolder = os.path.join(folder, subdir)
-        yield from collect_git_repositories(subfolder, ignore)
+        yield from collect_git_repositories(subfolder, ignore, maxdepth-1)
 
 
-def show_repos(folder=None, ignore=(), show_branch_details=False):
+def show_repos(folder=None, ignore=(), show_branch_details=False, maxdepth=-1):
     if folder is None:
         folder = '.'
     folder = os.path.realpath(folder)
     ignore = set(map(realpath, ignore))
 
-    for folder in collect_git_repositories(folder, ignore):
+    for folder in collect_git_repositories(folder, ignore, maxdepth):
         status = GitStatus(folder)
         if status.clean:
             continue
@@ -202,7 +205,8 @@ def main(args=None):
     opts = docopt(__doc__, args)
     show_repos(opts['PATH'],
                opts['--ignore'],
-               show_branch_details=opts['--branches'])
+               show_branch_details=opts['--branches'],
+               maxdepth=int(opts['--maxdepth'] or -1))
 
 
 if __name__ == '__main__':

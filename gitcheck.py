@@ -1,4 +1,10 @@
 #! /usr/bin/env python
+"""
+gitcheck - recursively check for unclean/unpushed git repositories.
+
+Usage:
+    gitcheck PATH
+"""
 
 import os
 import sys

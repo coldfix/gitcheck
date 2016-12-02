@@ -3,10 +3,11 @@
 gitcheck - recursively check for unclean/unpushed git repositories.
 
 Usage:
-    gitcheck [PATH] [--branches]
+    gitcheck [PATH] [--branches] [--ignore PATH]...
 
 Options:
     --branches              Show untracked branches
+    -i PATH --ignore PATH   Ignore this path
 """
 
 import os
@@ -33,6 +34,10 @@ SYNC_PART = re.compile(r'\[([^\[\]]*)\]$')
 #       git config --get-regexp ^branch\..*\.remote$
 # - Get remote for a specific branch:
 #       git rev-parse --symbolic-full-name --abbrev-ref master@{u}
+
+
+def realpath(p):
+    return os.path.normpath(os.path.realpath(p))
 
 
 class GitSyncStatus:
@@ -80,7 +85,6 @@ class GitSyncStatus:
             code = 'U'
         return '{:9}{:2} {}'.format(
             '', code, self.branch)
-
 
 
 class GitFlags:
@@ -158,7 +162,12 @@ class GitStatus:
         ])
 
 
-def collect_git_repositories(folder):
+def collect_git_repositories(folder, ignore):
+    normpath = realpath(folder)
+    if normpath in ignore:
+        return
+    ignore.add(normpath)
+
     subdirs = [fname for fname in os.listdir(folder)
                if os.path.isdir(os.path.join(folder, fname))]
     if '.git' in subdirs:
@@ -167,15 +176,17 @@ def collect_git_repositories(folder):
     for subdir in subdirs:
         if subdir.startswith('.'):
             continue
-        yield from collect_git_repositories(os.path.join(folder, subdir))
+        subfolder = os.path.join(folder, subdir)
+        yield from collect_git_repositories(subfolder, ignore)
 
 
-def show_repos(folder=None, show_branch_details=False):
+def show_repos(folder=None, ignore=(), show_branch_details=False):
     if folder is None:
         folder = '.'
     folder = os.path.realpath(folder)
+    ignore = set(map(realpath, ignore))
 
-    for folder in collect_git_repositories(folder):
+    for folder in collect_git_repositories(folder, ignore):
         status = GitStatus(folder)
         if status.clean:
             continue
@@ -190,6 +201,7 @@ def show_repos(folder=None, show_branch_details=False):
 def main(args=None):
     opts = docopt(__doc__, args)
     show_repos(opts['PATH'],
+               opts['--ignore'],
                show_branch_details=opts['--branches'])
 
 

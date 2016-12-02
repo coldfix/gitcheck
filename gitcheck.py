@@ -20,6 +20,8 @@ import re
 GIT_STATUS = ['git', 'status', '--porcelain', '--branch']
 
 # Get sync status for each branch
+SYNC_STATUS = ['git', 'for-each-ref', 'refs/heads',
+               '--format', '%(refname:short)...%(upstream:short) %(push:track)']
 SYNC_PART = re.compile(r'\[([^\[\]]*)\]$')
 
 # Related commands:
@@ -39,7 +41,7 @@ class GitSyncStatus:
         self.branch = branch
         self.remote = remote
         self.is_tracked = bool(remote)
-        sync_status = SYNC_PART.search(divergence)
+        sync_status = SYNC_PART.match(divergence)
         if sync_status is None:
             return
         for part in sync_status.group(1).split(','):
@@ -55,9 +57,11 @@ class GitSyncStatus:
         remote = divergence = ''
         if '...' in branch:
             branch, remote = branch.split('...', 1)
-            if ' ' in remote:
-                remote, divergence = remote.split(' ', 1)
-        return cls(branch, remote, divergence)
+            try:
+                remote, divergence = remote.split(maxsplit=1)
+            except ValueError:
+                pass
+        return cls(branch.strip(), remote.strip(), divergence.strip())
 
     @property
     def synced(self):
@@ -90,7 +94,7 @@ class GitStatus:
         workdir_flags = set()
         for l in status.decode('utf-8').splitlines():
             if l.startswith('## '):
-                self.sync_status = [GitSyncStatus.parse(l[3:])]
+                self.head_sync = GitSyncStatus.parse(l[3:])
             elif l.startswith('?? '):
                 self.untracked = True
             else:
@@ -101,20 +105,32 @@ class GitStatus:
         self.workdir_status = GitFlags(workdir_flags)
         self.index_status = GitFlags(index_flags)
 
+        sync_output = subprocess.check_output(SYNC_STATUS, cwd=folder)
+        self.branch_sync = [
+            GitSyncStatus.parse(line)
+            for line in sync_output.decode('utf-8').splitlines()
+        ]
+
     @property
     def clean(self):
         return (self.workdir_status.clean and
                 self.index_status.clean and
                 self.synced and
-                self.is_tracked)
+                self.head_sync.is_tracked and
+                self.num_untracked_branches == 0)
 
     @property
     def synced(self):
-        return all(stat.synced for stat in self.sync_status)
+        return all(stat.synced for stat in self.branch_sync
+                   if not stat.branch.startswith('_'))
 
     @property
-    def is_tracked(self):
-        return all(stat.is_tracked for stat in self.sync_status)
+    def num_untracked_branches(self):
+        head = self.head_sync.branch
+        return sum(1 for stat in self.branch_sync
+                   if not stat.branch.startswith('_')
+                   and stat.branch != head
+                   and not stat.is_tracked)
 
     def code(self):
         return ''.join([
@@ -122,7 +138,8 @@ class GitStatus:
             ' ' if self.index_status.clean else 'I',
             'T' if self.untracked else ' ',
             ' ' if self.synced else 'S',
-            ' ' if self.is_tracked else 'U',
+            ' ' if self.head_sync.is_tracked else 'H',
+            ' ' if self.num_untracked_branches == 0 else 'B',
         ])
 
 

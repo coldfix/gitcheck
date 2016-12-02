@@ -4,11 +4,14 @@ gitcheck - recursively check for unclean/unpushed git repositories.
 
 Usage:
     gitcheck [PATH] [--branches] [--ignore PATH]... [--maxdepth DEPTH]
+    gitcheck -h
 
 Options:
     --branches                      Show untracked branches
     -i PATH --ignore PATH           Ignore this path
     -m LVL, --maxdepth LVL          Maximum recursion depth
+
+    -h, --help                      Show this help
 """
 
 import os

@@ -28,6 +28,7 @@ from docopt import docopt
 
 # Check status of index/workdir
 GIT_STATUS = ['git', 'status', '--porcelain', '--branch']
+GIT_STASH = ['git', 'stash', 'list']
 
 # Get sync status for each branch
 SYNC_STATUS = ['git', 'for-each-ref', 'refs/heads',
@@ -129,6 +130,9 @@ class GitStatus:
         self.workdir_status = GitFlags(workdir_flags)
         self.index_status = GitFlags(index_flags)
 
+        stash_list = subprocess.check_output(GIT_STASH, cwd=folder)
+        self.num_stash_entries = len(stash_list.splitlines())
+
         sync_output = subprocess.check_output(SYNC_STATUS, cwd=folder)
         self.branch_sync = [
             GitSyncStatus.parse(line)
@@ -161,20 +165,22 @@ class GitStatus:
             ' ' if self.workdir_status.clean else 'W',
             ' ' if self.index_status.clean else 'I',
             'T' if self.untracked else ' ',
-            ' ' if self.synced else 'S',
+            ' ' if self.synced else 'L',
             ' ' if self.head_sync.is_tracked else 'H',
             ' ' if self.num_untracked_branches == 0 else 'B',
+            ' ' if self.num_stash_entries == 0 else 'S',
         ])
 
     @classmethod
     def legend(cls):
         return '\n'.join([
-            'W     ' + ' dirty work-dir',
-            ' I    ' + ' Uncommited changes',
-            '  T   ' + ' Untracked files',
-            '   S  ' + ' Synchronized with remote',
-            '    H ' + ' Head not tracked by remote',
-            '     B' + ' Untracked branches',
+            'W      ' + ' dirty work-dir',
+            ' I     ' + ' Uncommited index',
+            '  T    ' + ' Untracked files',
+            '   L   ' + ' Local unsynchronized branches',
+            '    H  ' + ' Head not tracked by remote',
+            '     B ' + ' Untracked branches',
+            '      S' + ' Stashed entries',
         ])
 
 

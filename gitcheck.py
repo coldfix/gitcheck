@@ -3,10 +3,11 @@
 gitcheck - recursively check for unclean/unpushed git repositories.
 
 Usage:
-    gitcheck [PATH] [--branches] [--ignore PATH]... [--maxdepth DEPTH]
+    gitcheck [PATH] [-a] [--branches] [--ignore PATH]... [--maxdepth DEPTH]
     gitcheck -h
 
 Options:
+    -a, --all                       Show all repositories, even if clean
     --branches                      Show untracked branches
     -i PATH --ignore PATH           Ignore this path
     -m LVL, --maxdepth LVL          Maximum recursion depth
@@ -186,7 +187,7 @@ def collect_git_repositories(folder, ignore, maxdepth):
         yield from collect_git_repositories(subfolder, ignore, maxdepth-1)
 
 
-def show_repos(folder=None, ignore=(), show_branch_details=False, maxdepth=-1):
+def show_repos(folder=None, ignore=(), show_branch_details=False, maxdepth=-1, show_clean=False):
     if folder is None:
         folder = '.'
     folder = os.path.realpath(folder)
@@ -194,7 +195,7 @@ def show_repos(folder=None, ignore=(), show_branch_details=False, maxdepth=-1):
 
     for folder in collect_git_repositories(folder, ignore, maxdepth):
         status = GitStatus(folder)
-        if status.clean:
+        if status.clean and not show_clean:
             continue
         print(status.code(), folder)
 
@@ -206,10 +207,12 @@ def show_repos(folder=None, ignore=(), show_branch_details=False, maxdepth=-1):
 
 def main(args=None):
     opts = docopt(__doc__, args)
-    show_repos(opts['PATH'],
-               opts['--ignore'],
-               show_branch_details=opts['--branches'],
-               maxdepth=int(opts['--maxdepth'] or -1))
+    show_repos(
+        opts['PATH'],
+        opts['--ignore'],
+        show_branch_details=opts['--branches'],
+        maxdepth=int(opts['--maxdepth'] or -1),
+        show_clean=opts['--all'])
 
 
 if __name__ == '__main__':

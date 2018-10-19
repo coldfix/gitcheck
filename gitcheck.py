@@ -166,6 +166,17 @@ class GitStatus:
             ' ' if self.num_untracked_branches == 0 else 'B',
         ])
 
+    @classmethod
+    def legend(cls):
+        return '\n'.join([
+            'W     ' + ' dirty work-dir',
+            ' I    ' + ' Uncommited changes',
+            '  T   ' + ' Untracked files',
+            '   S  ' + ' Synchronized with remote',
+            '    H ' + ' Head not tracked by remote',
+            '     B' + ' Untracked branches',
+        ])
+
 
 def collect_git_repositories(folder, ignore, maxdepth):
     normpath = realpath(folder)
@@ -207,6 +218,7 @@ def show_repos(folder=None, ignore=(), show_branch_details=False, maxdepth=-1, s
 
 def main(args=None):
     opts = docopt(__doc__, args)
+    print(GitStatus.legend())
     show_repos(
         opts['PATH'],
         opts['--ignore'],
